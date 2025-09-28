@@ -43,15 +43,15 @@ const CitizenDashboard: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reports, setReports] = useState<Report[]>([
-    /*{
+    {
       _id: '1',
       userId: user?._id || '1',
-      description: 'Stagnant water with algae growth near the park entrance',
+      description: 'Stagnant water with algae growth near Thane Creek',
       imageUrl: 'https://images.pexels.com/photos/3560167/pexels-photo-3560167.jpeg',
-      location: { lat: 18.5204, lng: 73.8567 },
-      address: 'Park Road, Pune',
+      location: { lat: 19.2183, lng: 72.9781 },
+      address: 'Thane Creek, Thane',
       date: '2025-01-15T10:30:00Z',
-    },*/
+    }
   ]);
 
   const MapClickHandler = () => {
@@ -283,7 +283,7 @@ const CitizenDashboard: React.FC = () => {
               </div>
               <div className="card-body p-0">
                 <MapContainer
-                  center={[18.5204, 73.8567]}
+                  center={[19.2183, 72.9781]}
                   zoom={13}
                   style={{ height: '400px', width: '100%' }}
                 >

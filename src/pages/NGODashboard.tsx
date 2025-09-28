@@ -36,40 +36,40 @@ const NGODashboard: React.FC = () => {
       _id: '1',
       userId: '1',
       reporterName: 'John Citizen',
-      description: 'Stagnant water with algae growth near the park entrance',
+      description: 'Stagnant water with algae growth near Thane Creek',
       imageUrl: 'https://images.pexels.com/photos/3560167/pexels-photo-3560167.jpeg',
-      location: { lat: 18.5204, lng: 73.8567 },
-      address: 'Park Road, Pune',
+      location: { lat: 19.2183, lng: 72.9781 },
+      address: 'Thane Creek, Thane',
       date: '2025-01-15T10:30:00Z',
     },
     {
       _id: '2',
       userId: '1',
       reporterName: 'Jane Smith',
-      description: 'Chemical contamination in the river, unusual foam and discoloration',
+      description: 'Chemical contamination in Thane Creek, unusual foam and discoloration',
       imageUrl: 'https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg',
-      location: { lat: 18.5104, lng: 73.8467 },
-      address: 'River Bank, Pune',
+      location: { lat: 19.2083, lng: 72.9681 },
+      address: 'Creek Bank, Thane',
       date: '2025-01-14T15:45:00Z',
     },
     {
       _id: '3',
       userId: '1',
       reporterName: 'Mike Johnson',
-      description: 'Plastic waste accumulation blocking water flow',
+      description: 'Plastic waste accumulation blocking water flow in Thane Creek',
       imageUrl: 'https://images.pexels.com/photos/2827392/pexels-photo-2827392.jpeg',
-      location: { lat: 18.5304, lng: 73.8667 },
-      address: 'Canal Street, Pune',
+      location: { lat: 19.2283, lng: 72.9881 },
+      address: 'Creek Side, Thane',
       date: '2025-01-13T09:15:00Z',
     },
     {
       _id: '4',
       userId: '1',
       reporterName: 'Sarah Wilson',
-      description: 'Oil spill in the lake affecting local wildlife',
+      description: 'Oil spill in Thane Creek affecting local wildlife',
       imageUrl: 'https://images.pexels.com/photos/3560169/pexels-photo-3560169.jpeg',
-      location: { lat: 18.5404, lng: 73.8367 },
-      address: 'Lake View, Pune',
+      location: { lat: 19.2383, lng: 72.9581 },
+      address: 'Creek View, Thane',
       date: '2025-01-12T14:20:00Z',
     },
   ];
@@ -220,7 +220,7 @@ const NGODashboard: React.FC = () => {
                     onChange={(e) => setCityFilter(e.target.value)}
                   >
                     <option value="">All Cities</option>
-                    <option value="pune">Pune</option>
+                    <option value="thane">Thane</option>
                     <option value="mumbai">Mumbai</option>
                     <option value="delhi">Delhi</option>
                   </select>
@@ -272,7 +272,7 @@ const NGODashboard: React.FC = () => {
               </div>
               <div className="card-body p-0">
                 <MapContainer
-                  center={[18.5204, 73.8567]}
+                  center={[19.2183, 72.9781]}
                   zoom={12}
                   style={{ height: '600px', width: '100%' }}
                   ref={mapRef}

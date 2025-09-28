@@ -112,11 +112,30 @@ const SignUpPage: React.FC = () => {
   };
 
   return (
-    <div className="signup-page min-vh-100 d-flex align-items-center bg-light">
+    <div 
+      className="signup-page min-vh-100 d-flex align-items-center"
+      style={{
+        backgroundImage: 'url(https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        position: 'relative'
+      }}
+    >
+      <div 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          zIndex: 1
+        }}
+      ></div>
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-md-6 col-lg-5">
-            <div className="card shadow-lg border-0">
+            <div className="card shadow-lg border-0" style={{ position: 'relative', zIndex: 2 }}>
               <div className="card-body p-5">
                 <div className="text-center mb-4">
                   <h2 className="fw-bold text-primary mb-2">Join Water Talk</h2>
