@@ -23,7 +23,7 @@ const LandingPage: React.FC = () => {
           <div className="hero-overlay"></div>
           <div className="container h-100 d-flex align-items-center position-relative">
             <div className="row w-100">
-              <div className="col-lg-8 mx-auto text-center text-white">
+              <div className="col-lg-8 text-start text-white">
                 <h1 className="display-3 fw-bold mb-4 hero-title">
                   Water Talk
                 </h1>
@@ -36,14 +36,14 @@ const LandingPage: React.FC = () => {
                 <div className="hero-buttons">
                   <Link 
                     to="/login" 
-                    className="btn btn-primary btn-lg me-3 px-4 py-3"
+                    className="btn btn-primary btn-lg me-3 px-5 py-3"
                   >
                     Login
                     <ArrowRight className="ms-2" size={20} />
                   </Link>
                   <Link 
                     to="/signup" 
-                    className="btn btn-outline-light btn-lg px-4 py-3"
+                    className="btn btn-primary btn-lg px-5 py-3"
                   >
                     Sign Up
                   </Link>

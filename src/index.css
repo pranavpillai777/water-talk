@@ -56,6 +56,10 @@
   animation: fadeInUp 1s ease-out 0.6s both;
 }
 
+.hero-buttons .btn {
+  min-width: 150px;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -130,6 +134,29 @@
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(255, 255, 255, 0.2);
+}
+
+/* Tab Styles */
+.nav-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  padding: 12px 20px;
+  background: none;
+}
+
+.nav-tabs .nav-link:hover {
+  border: none;
+  color: var(--primary-blue);
+  background: rgba(14, 165, 233, 0.1);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--primary-blue);
+  background: white;
+  border: none;
+  border-bottom: 3px solid var(--primary-blue);
+  font-weight: 600;
 }
 
 /* Form Styles */
