@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
-import { Camera, MapPin, Upload, FileText, Clock, Trash2 } from 'lucide-react';
+import { Camera, MapPin, Upload, FileText, Clock, Trash2, User, List } from 'lucide-react';
 
 // Fix for default markers
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -42,6 +42,7 @@ const CitizenDashboard: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'report' | 'submissions'>('report');
   const [reports, setReports] = useState<Report[]>([
     {
       _id: '1',
@@ -175,18 +176,60 @@ const CitizenDashboard: React.FC = () => {
     <div className="citizen-dashboard">
       <Navbar />
       
-      <div className="container-fluid" style={{ paddingTop: '80px' }}>
+      {/* User Info Header */}
+      <div className="bg-light border-bottom" style={{ paddingTop: '80px' }}>
+        <div className="container-fluid">
+          <div className="row py-3">
+            <div className="col-12 d-flex justify-content-between align-items-center">
+              <h3 className="mb-0 text-primary">Citizen Dashboard</h3>
+              <div className="d-flex align-items-center">
+                <User size={24} className="text-primary me-2" />
+                <span className="fw-semibold text-dark">{user?.name}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Navigation Tabs */}
+          <div className="row">
+            <div className="col-12">
+              <ul className="nav nav-tabs">
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'report' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('report')}
+                  >
+                    <Camera size={18} className="me-2" />
+                    Report Issue
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'submissions' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('submissions')}
+                  >
+                    <List size={18} className="me-2" />
+                    My Submissions ({reports.length})
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-fluid py-4">
+        {activeTab === 'report' && (
         <div className="row">
           {/* Report Form */}
-          <div className="col-lg-6 p-4">
-            <div className="card shadow">
+          <div className="col-lg-7 pe-4">
+            <div className="card shadow h-100">
               <div className="card-header bg-primary text-white">
-                <h4 className="card-title mb-0">
+                <h5 className="card-title mb-0">
                   <Camera className="me-2" size={20} />
                   Report a Water Issue
-                </h4>
+                </h5>
               </div>
-              <div className="card-body">
+              <div className="card-body p-4">
                 <form onSubmit={handleSubmit}>
                   {/* Image Upload */}
                   <div className="mb-4">
@@ -265,7 +308,7 @@ const CitizenDashboard: React.FC = () => {
 
                   <button
                     type="submit"
-                    className="btn btn-primary w-100"
+                    className="btn btn-primary w-100 py-3 fw-semibold"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Report'}
@@ -276,16 +319,19 @@ const CitizenDashboard: React.FC = () => {
           </div>
 
           {/* Map */}
-          <div className="col-lg-6 p-4">
+          <div className="col-lg-5 ps-4">
             <div className="card shadow h-100">
               <div className="card-header">
-                <h5 className="card-title mb-0">Click on map to mark location</h5>
+                <h6 className="card-title mb-0">
+                  <MapPin className="me-2" size={18} />
+                  Click on map to mark location
+                </h6>
               </div>
               <div className="card-body p-0">
                 <MapContainer
                   center={[19.2183, 72.9781]}
                   zoom={12}
-                  style={{ height: '400px', width: '100%' }}
+                  style={{ height: '500px', width: '100%' }}
                 >
                   <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -306,24 +352,34 @@ const CitizenDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Previous Reports */}
-        <div className="row mt-4">
+        {activeTab === 'submissions' && (
+        <div className="row">
           <div className="col-12">
             <div className="card shadow">
               <div className="card-header">
-                <h4 className="card-title mb-0">
+                <h5 className="card-title mb-0">
                   <Clock className="me-2" size={20} />
-                  Your Previous Reports
-                </h4>
+                  Your Submissions
+                </h5>
               </div>
-              <div className="card-body">
+              <div className="card-body p-4">
                 {reports.length === 0 ? (
-                  <p className="text-muted text-center py-4">No reports submitted yet.</p>
+                  <div className="text-center py-5">
+                    <List size={48} className="text-muted mb-3" />
+                    <p className="text-muted">No reports submitted yet.</p>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => setActiveTab('report')}
+                    >
+                      Submit Your First Report
+                    </button>
+                  </div>
                 ) : (
                   <div className="row">
                     {reports.map((report) => (
-                      <div key={report._id} className="col-md-6 col-lg-4 mb-4">
+                      <div key={report._id} className="col-md-6 col-xl-4 mb-4">
                         <div className="card report-card h-100">
                           <img
                             src={report.imageUrl}
@@ -351,6 +407,7 @@ const CitizenDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
