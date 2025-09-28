@@ -13,7 +13,7 @@ const LandingPage: React.FC = () => {
         <div 
           className="hero-bg"
           style={{
-            backgroundImage: 'url(https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg)',
+            backgroundImage: 'url(https://www.fodors.com/wp-content/uploads/2021/05/19_EpicBodiesOfWater__LakePehoe_shutterstock_1017479992-1536x1024.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             height: '100vh',

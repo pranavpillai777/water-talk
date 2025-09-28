@@ -99,7 +99,7 @@ const LoginPage: React.FC = () => {
     <div 
       className="login-page min-vh-100 d-flex align-items-center"
       style={{
-        backgroundImage: 'url(https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg)',
+        backgroundImage: 'url(https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         position: 'relative'

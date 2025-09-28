@@ -273,7 +273,7 @@ const NGODashboard: React.FC = () => {
               <div className="card-body p-0">
                 <MapContainer
                   center={[19.2183, 72.9781]}
-                  zoom={12}
+                  zoom={11}
                   style={{ height: '600px', width: '100%' }}
                   ref={mapRef}
                 >
