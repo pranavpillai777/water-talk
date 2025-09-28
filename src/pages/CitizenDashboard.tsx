@@ -284,7 +284,7 @@ const CitizenDashboard: React.FC = () => {
               <div className="card-body p-0">
                 <MapContainer
                   center={[19.2183, 72.9781]}
-                  zoom={13}
+                  zoom={12}
                   style={{ height: '400px', width: '100%' }}
                 >
                   <TileLayer
@@ -295,6 +295,12 @@ const CitizenDashboard: React.FC = () => {
                   {formData.location && (
                     <Marker position={[formData.location.lat, formData.location.lng]} />
                   )}
+                  {reports.map((report) => (
+                    <Marker
+                      key={report._id}
+                      position={[report.location.lat, report.location.lng]}
+                    />
+                  ))}
                 </MapContainer>
               </div>
             </div>
