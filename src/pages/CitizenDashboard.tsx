@@ -43,7 +43,7 @@ const CitizenDashboard: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reports, setReports] = useState<Report[]>([
-    {
+    /*{
       _id: '1',
       userId: user?._id || '1',
       description: 'Stagnant water with algae growth near the park entrance',
@@ -51,7 +51,7 @@ const CitizenDashboard: React.FC = () => {
       location: { lat: 18.5204, lng: 73.8567 },
       address: 'Park Road, Pune',
       date: '2025-01-15T10:30:00Z',
-    },
+    },*/
   ]);
 
   const MapClickHandler = () => {

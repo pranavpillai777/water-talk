@@ -108,11 +108,11 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 {/* Demo credentials */}
-                <div className="alert alert-info" role="alert">
+                {/*<div className="alert alert-info" role="alert">
                   <strong>Demo Credentials:</strong><br />
                   Citizen: citizen@example.com / password123<br />
                   NGO: ngo@example.com / password123
-                </div>
+                </div>*/}
 
                 <form onSubmit={handleSubmit}>
                   {/* Email Field */}
