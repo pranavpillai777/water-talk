@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Mock users for demonstration
   const mockUsers = [
-    { _id: '1', name: 'John Citizen', email: 'citizen@example.com', password: 'password123', role: 'citizen' as const },
+    { _id: '1', name: 'Pranav Pillai', email: 'pranav.pillai@somaiya.edu', password: 'password', role: 'citizen' as const },
     { _id: '2', name: 'Green NGO', email: 'ngo@example.com', password: 'password123', role: 'ngo' as const },
   ];
 
