@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
-import { Camera, MapPin, Upload, FileText, Clock, Trash2, User, List } from 'lucide-react';
+import { Camera, MapPin, Upload, FileText, Clock, User, List, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 
 // Fix for default markers
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -13,16 +13,6 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-interface Report {
-  _id: string;
-  userId: string;
-  description: string;
-  imageUrl: string;
-  location: { lat: number; lng: number };
-  address: string;
-  date: string;
-}
-
 interface FormData {
   description: string;
   address: string;
@@ -31,8 +21,10 @@ interface FormData {
 }
 
 const CitizenDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, reports, addReport, approveCompletion } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
   const [formData, setFormData] = useState<FormData>({
     description: '',
     address: '',
@@ -128,18 +120,16 @@ const CitizenDashboard: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Mock API call - in real app, this would upload to server
-      const newReport: Report = {
-        _id: Date.now().toString(),
+      const reportData = {
         userId: user?._id || '',
+        username: user?.name || '',
         description: formData.description,
-        imageUrl: imagePreview || '',
+        photo: imagePreview || '',
         location: formData.location || { lat: 0, lng: 0 },
         address: formData.address,
-        date: new Date().toISOString(),
       };
 
-      setReports(prev => [newReport, ...prev]);
+      addReport(reportData);
 
       // Reset form
       setFormData({
@@ -159,6 +149,32 @@ const CitizenDashboard: React.FC = () => {
       alert('Error submitting report. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Reported':
+        return <span className="badge bg-warning text-dark"><AlertCircle size={14} className="me-1" />Reported</span>;
+      case 'Active':
+        return <span className="badge bg-info"><Clock size={14} className="me-1" />Active</span>;
+      case 'Completed':
+        return <span className="badge bg-success"><CheckCircle size={14} className="me-1" />Completed</span>;
+      default:
+        return <span className="badge bg-secondary">Unknown</span>;
+    }
+  };
+
+  const handleViewCompletion = (report: any) => {
+    setSelectedReport(report);
+    setShowCompletionModal(true);
+  };
+
+  const handleApproveCompletion = () => {
+    if (selectedReport) {
+      approveCompletion(selectedReport.reportId);
+      setShowCompletionModal(false);
+      setSelectedReport(null);
     }
   };
 
@@ -343,7 +359,7 @@ const CitizenDashboard: React.FC = () => {
                   )}
                   {reports.map((report) => (
                     <Marker
-                      key={report._id}
+                      key={report.reportId}
                       position={[report.location.lat, report.location.lng]}
                     />
                   ))}
@@ -365,7 +381,7 @@ const CitizenDashboard: React.FC = () => {
                 </h5>
               </div>
               <div className="card-body p-4">
-                {reports.length === 0 ? (
+                {userReports.length === 0 ? (
                   <div className="text-center py-5">
                     <List size={48} className="text-muted mb-3" />
                     <p className="text-muted">No reports submitted yet.</p>
@@ -378,24 +394,42 @@ const CitizenDashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="row">
-                    {reports.map((report) => (
-                      <div key={report._id} className="col-md-6 col-xl-4 mb-4">
+                    {userReports.map((report) => (
+                      <div key={report.reportId} className="col-md-6 col-xl-4 mb-4">
                         <div className="card report-card h-100">
                           <img
-                            src={report.imageUrl}
+                            src={report.photo}
                             className="card-img-top"
                             alt="Report"
                             style={{ height: '200px', objectFit: 'cover' }}
                           />
                           <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              {getStatusBadge(report.status)}
+                              {report.status === 'Active' && report.completionImage && !report.citizenApproval && (
+                                <button
+                                  className="btn btn-sm btn-outline-primary"
+                                  onClick={() => handleViewCompletion(report)}
+                                >
+                                  <Eye size={14} className="me-1" />
+                                  Review
+                                </button>
+                              )}
+                            </div>
                             <p className="card-text">{report.description}</p>
                             <div className="d-flex align-items-center text-muted small mb-2">
                               <MapPin size={14} className="me-1" />
                               {report.address}
                             </div>
+                            {report.ngoList.length > 0 && (
+                              <div className="d-flex align-items-center text-muted small mb-2">
+                                <User size={14} className="me-1" />
+                                NGOs: {report.ngoList.join(', ')}
+                              </div>
+                            )}
                             <div className="d-flex align-items-center text-muted small">
                               <Clock size={14} className="me-1" />
-                              {formatDate(report.date)}
+                              {formatDate(report.timestamp)}
                             </div>
                           </div>
                         </div>
@@ -409,6 +443,44 @@ const CitizenDashboard: React.FC = () => {
         </div>
         )}
       </div>
+
+      {/* Completion Review Modal */}
+      <div className={`modal fade ${showCompletionModal ? 'show' : ''}`} style={{ display: showCompletionModal ? 'block' : 'none' }} tabIndex={-1}>
+        <div className="modal-dialog modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Review Completion</h5>
+              <button type="button" className="btn-close" onClick={() => setShowCompletionModal(false)}></button>
+            </div>
+            <div className="modal-body">
+              {selectedReport && (
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6>Original Report</h6>
+                    <img src={selectedReport.photo} alt="Original" className="img-fluid rounded mb-2" />
+                    <p>{selectedReport.description}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6>Completion Proof</h6>
+                    <img src={selectedReport.completionImage} alt="Completion" className="img-fluid rounded mb-2" />
+                    <p className="text-muted">Submitted by: {selectedReport.ngoList.join(', ')}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowCompletionModal(false)}>
+                Close
+              </button>
+              <button type="button" className="btn btn-success" onClick={handleApproveCompletion}>
+                <CheckCircle size={16} className="me-1" />
+                Approve Completion
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {showCompletionModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 };

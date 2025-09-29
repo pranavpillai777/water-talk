@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
-import { Search, Filter, Calendar, MapPin, User, BarChart3 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Search, Filter, Calendar, MapPin, User, BarChart3, CheckCircle, Clock, AlertCircle, Upload, Eye } from 'lucide-react';
 
 // Fix for default markers
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -12,69 +13,22 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-interface Report {
-  _id: string;
-  userId: string;
-  reporterName: string;
-  description: string;
-  imageUrl: string;
-  location: { lat: number; lng: number };
-  address: string;
-  date: string;
-}
-
 const NGODashboard: React.FC = () => {
+  const { user, reports, acceptReport, uploadCompletionImage } = useAuth();
   const mapRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [activeSection, setActiveSection] = useState<'reported' | 'active' | 'completed'>('reported');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadingReport, setUploadingReport] = useState<any>(null);
+  const [completionImage, setCompletionImage] = useState<File | null>(null);
+  const [completionPreview, setCompletionPreview] = useState<string | null>(null);
 
-  // Mock reports data
-  const allReports: Report[] = [
-    {
-      _id: '1',
-      userId: '1',
-      reporterName: 'John Citizen',
-      description: 'Stagnant water with algae growth near Thane Creek',
-      imageUrl: 'https://images.pexels.com/photos/3560167/pexels-photo-3560167.jpeg',
-      location: { lat: 19.2183, lng: 72.9781 },
-      address: 'Thane Creek, Thane',
-      date: '2025-01-15T10:30:00Z',
-    },
-    {
-      _id: '2',
-      userId: '1',
-      reporterName: 'Jane Smith',
-      description: 'Chemical contamination in Thane Creek, unusual foam and discoloration',
-      imageUrl: 'https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg',
-      location: { lat: 19.2083, lng: 72.9681 },
-      address: 'Creek Bank, Thane',
-      date: '2025-01-14T15:45:00Z',
-    },
-    {
-      _id: '3',
-      userId: '1',
-      reporterName: 'Mike Johnson',
-      description: 'Plastic waste accumulation blocking water flow in Thane Creek',
-      imageUrl: 'https://images.pexels.com/photos/2827392/pexels-photo-2827392.jpeg',
-      location: { lat: 19.2283, lng: 72.9881 },
-      address: 'Creek Side, Thane',
-      date: '2025-01-13T09:15:00Z',
-    },
-    {
-      _id: '4',
-      userId: '1',
-      reporterName: 'Sarah Wilson',
-      description: 'Oil spill in Thane Creek affecting local wildlife',
-      imageUrl: 'https://images.pexels.com/photos/3560169/pexels-photo-3560169.jpeg',
-      location: { lat: 19.2383, lng: 72.9581 },
-      address: 'Creek View, Thane',
-      date: '2025-01-12T14:20:00Z',
-    },
-  ];
-
-  const [filteredReports, setFilteredReports] = useState<Report[]>(allReports);
+  const allReports = reports;
+  const [filteredReports, setFilteredReports] = useState(allReports);
 
   const handleFilter = () => {
     let filtered = allReports;
@@ -83,7 +37,7 @@ const NGODashboard: React.FC = () => {
       filtered = filtered.filter(report =>
         report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.reporterName.toLowerCase().includes(searchTerm.toLowerCase())
+        report.username.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -96,7 +50,7 @@ const NGODashboard: React.FC = () => {
     if (dateFilter) {
       const filterDate = new Date(dateFilter);
       filtered = filtered.filter(report => {
-        const reportDate = new Date(report.date);
+        const reportDate = new Date(report.timestamp);
         return reportDate >= filterDate;
       });
     }
@@ -106,8 +60,44 @@ const NGODashboard: React.FC = () => {
 
   React.useEffect(() => {
     handleFilter();
-  }, [searchTerm, dateFilter, cityFilter]);
+  }, [searchTerm, dateFilter, cityFilter, allReports]);
 
+  const handleAcceptReport = (reportId: string) => {
+    if (user?.name) {
+      acceptReport(reportId, user.name);
+    }
+  };
+
+  const handleUploadCompletion = (report: any) => {
+    setUploadingReport(report);
+    setShowUploadModal(true);
+  };
+
+  const handleCompletionImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCompletionImage(file);
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCompletionPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmitCompletion = () => {
+    if (uploadingReport && completionPreview && user?.name) {
+      uploadCompletionImage(uploadingReport.reportId, completionPreview, user.name);
+      setShowUploadModal(false);
+      setUploadingReport(null);
+      setCompletionImage(null);
+      setCompletionPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -121,7 +111,7 @@ const NGODashboard: React.FC = () => {
   const getThisWeekReports = () => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    return allReports.filter(report => new Date(report.date) >= oneWeekAgo).length;
+    return allReports.filter(report => new Date(report.timestamp) >= oneWeekAgo).length;
   };
 
   const getMostReportedArea = () => {
@@ -133,6 +123,23 @@ const NGODashboard: React.FC = () => {
     
     return Object.entries(areaCounts).reduce((a, b) => areaCounts[a[0]] > areaCounts[b[0]] ? a : b)[0];
   };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Reported':
+        return <span className="badge bg-warning text-dark"><AlertCircle size={14} className="me-1" />Reported</span>;
+      case 'Active':
+        return <span className="badge bg-info"><Clock size={14} className="me-1" />Active</span>;
+      case 'Completed':
+        return <span className="badge bg-success"><CheckCircle size={14} className="me-1" />Completed</span>;
+      default:
+        return <span className="badge bg-secondary">Unknown</span>;
+    }
+  };
+
+  const reportedReports = filteredReports.filter(report => report.status === 'Reported');
+  const activeReports = filteredReports.filter(report => report.status === 'Active');
+  const completedReports = filteredReports.filter(report => report.status === 'Completed');
 
   return (
     <div className="ngo-dashboard">
@@ -177,6 +184,45 @@ const NGODashboard: React.FC = () => {
                     <h3 className="mb-0">{getMostReportedArea()}</h3>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Navigation */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-body">
+                <ul className="nav nav-pills justify-content-center">
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${activeSection === 'reported' ? 'active' : ''}`}
+                      onClick={() => setActiveSection('reported')}
+                    >
+                      <AlertCircle size={18} className="me-2" />
+                      Reported ({reportedReports.length})
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${activeSection === 'active' ? 'active' : ''}`}
+                      onClick={() => setActiveSection('active')}
+                    >
+                      <Clock size={18} className="me-2" />
+                      Active ({activeReports.length})
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button 
+                      className={`nav-link ${activeSection === 'completed' ? 'active' : ''}`}
+                      onClick={() => setActiveSection('completed')}
+                    >
+                      <CheckCircle size={18} className="me-2" />
+                      Completed ({completedReports.length})
+                    </button>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -259,6 +305,11 @@ const NGODashboard: React.FC = () => {
                   <p className="text-muted small mb-1">
                     Showing {filteredReports.length} of {allReports.length} reports
                   </p>
+                  <div className="mt-2">
+                    <small className="text-muted d-block">Reported: {reportedReports.length}</small>
+                    <small className="text-muted d-block">Active: {activeReports.length}</small>
+                    <small className="text-muted d-block">Completed: {completedReports.length}</small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -283,7 +334,7 @@ const NGODashboard: React.FC = () => {
                   />
                   {filteredReports.map((report) => (
                     <Marker
-                      key={report._id}
+                      key={report.reportId}
                       position={[report.location.lat, report.location.lng]}
                       eventHandlers={{
                         click: () => setSelectedReport(report),
@@ -292,11 +343,12 @@ const NGODashboard: React.FC = () => {
                       <Popup>
                         <div style={{ minWidth: '250px' }}>
                           <img
-                            src={report.imageUrl}
+                            src={report.photo}
                             alt="Report"
                             style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px' }}
                           />
                           <div className="mt-2">
+                            <div className="mb-2">{getStatusBadge(report.status)}</div>
                             <p className="mb-2 fw-semibold">{report.description}</p>
                             <div className="d-flex align-items-center text-muted small mb-1">
                               <MapPin size={14} className="me-1" />
@@ -304,11 +356,17 @@ const NGODashboard: React.FC = () => {
                             </div>
                             <div className="d-flex align-items-center text-muted small mb-1">
                               <User size={14} className="me-1" />
-                              {report.reporterName}
+                              {report.username}
                             </div>
+                            {report.ngoList.length > 0 && (
+                              <div className="d-flex align-items-center text-muted small mb-1">
+                                <User size={14} className="me-1" />
+                                NGOs: {report.ngoList.join(', ')}
+                              </div>
+                            )}
                             <div className="d-flex align-items-center text-muted small">
                               <Calendar size={14} className="me-1" />
-                              {formatDate(report.date)}
+                              {formatDate(report.timestamp)}
                             </div>
                           </div>
                         </div>
@@ -326,47 +384,226 @@ const NGODashboard: React.FC = () => {
           <div className="col-12">
             <div className="card shadow">
               <div className="card-header">
-                <h5 className="card-title mb-0">Recent Reports</h5>
+                <h5 className="card-title mb-0">
+                  {activeSection === 'reported' && 'Reported Issues'}
+                  {activeSection === 'active' && 'Active Reports'}
+                  {activeSection === 'completed' && 'Completed Reports'}
+                </h5>
               </div>
               <div className="card-body">
-                <div className="row">
-                  {filteredReports.map((report) => (
-                    <div key={report._id} className="col-md-6 col-lg-4 mb-4">
-                      <div 
-                        className="card report-card h-100"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => setSelectedReport(report)}
-                      >
-                        <img
-                          src={report.imageUrl}
-                          className="card-img-top"
-                          alt="Report"
-                          style={{ height: '200px', objectFit: 'cover' }}
-                        />
-                        <div className="card-body">
-                          <p className="card-text">{report.description}</p>
-                          <div className="d-flex align-items-center text-muted small mb-2">
-                            <MapPin size={14} className="me-1" />
-                            {report.address}
-                          </div>
-                          <div className="d-flex align-items-center text-muted small mb-2">
-                            <User size={14} className="me-1" />
-                            {report.reporterName}
-                          </div>
-                          <div className="d-flex align-items-center text-muted small">
-                            <Calendar size={14} className="me-1" />
-                            {formatDate(report.date)}
+                {activeSection === 'reported' && (
+                  <div className="row">
+                    {reportedReports.map((report) => (
+                      <div key={report.reportId} className="col-md-6 col-lg-4 mb-4">
+                        <div className="card report-card h-100">
+                          <img
+                            src={report.photo}
+                            className="card-img-top"
+                            alt="Report"
+                            style={{ height: '200px', objectFit: 'cover' }}
+                          />
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              {getStatusBadge(report.status)}
+                            </div>
+                            <p className="card-text">{report.description}</p>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <MapPin size={14} className="me-1" />
+                              {report.address}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <User size={14} className="me-1" />
+                              {report.username}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-3">
+                              <Calendar size={14} className="me-1" />
+                              {formatDate(report.timestamp)}
+                            </div>
+                            <button
+                              className="btn btn-primary btn-sm w-100"
+                              onClick={() => handleAcceptReport(report.reportId)}
+                            >
+                              <CheckCircle size={14} className="me-1" />
+                              Accept Report
+                            </button>
                           </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeSection === 'active' && (
+                  <div className="row">
+                    {activeReports.map((report) => (
+                      <div key={report.reportId} className="col-md-6 col-lg-4 mb-4">
+                        <div className="card report-card h-100">
+                          <img
+                            src={report.photo}
+                            className="card-img-top"
+                            alt="Report"
+                            style={{ height: '200px', objectFit: 'cover' }}
+                          />
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              {getStatusBadge(report.status)}
+                            </div>
+                            <p className="card-text">{report.description}</p>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <MapPin size={14} className="me-1" />
+                              {report.address}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <User size={14} className="me-1" />
+                              {report.username}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <User size={14} className="me-1" />
+                              NGOs: {report.ngoList.join(', ')}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-3">
+                              <Calendar size={14} className="me-1" />
+                              {formatDate(report.timestamp)}
+                            </div>
+                            {!report.completionImage ? (
+                              <button
+                                className="btn btn-success btn-sm w-100"
+                                onClick={() => handleUploadCompletion(report)}
+                              >
+                                <Upload size={14} className="me-1" />
+                                Upload Completion
+                              </button>
+                            ) : (
+                              <div className="text-center">
+                                <small className="text-muted">Completion uploaded - awaiting citizen approval</small>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeSection === 'completed' && (
+                  <div className="row">
+                    {completedReports.map((report) => (
+                      <div key={report.reportId} className="col-md-6 col-lg-4 mb-4">
+                        <div className="card report-card h-100">
+                          <img
+                            src={report.photo}
+                            className="card-img-top"
+                            alt="Report"
+                            style={{ height: '200px', objectFit: 'cover' }}
+                          />
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              {getStatusBadge(report.status)}
+                            </div>
+                            <p className="card-text">{report.description}</p>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <MapPin size={14} className="me-1" />
+                              {report.address}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <User size={14} className="me-1" />
+                              {report.username}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-2">
+                              <User size={14} className="me-1" />
+                              NGOs: {report.ngoList.join(', ')}
+                            </div>
+                            <div className="d-flex align-items-center text-muted small mb-3">
+                              <Calendar size={14} className="me-1" />
+                              {formatDate(report.timestamp)}
+                            </div>
+                            {report.completionImage && (
+                              <div className="text-center">
+                                <img
+                                  src={report.completionImage}
+                                  alt="Completion"
+                                  className="img-thumbnail"
+                                  style={{ maxHeight: '100px', maxWidth: '100%' }}
+                                />
+                                <div className="mt-2">
+                                  <small className="text-success">✓ Citizen Approved</small>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {((activeSection === 'reported' && reportedReports.length === 0) ||
+                  (activeSection === 'active' && activeReports.length === 0) ||
+                  (activeSection === 'completed' && completedReports.length === 0)) && (
+                  <div className="text-center py-5">
+                    <div className="text-muted">
+                      {activeSection === 'reported' && 'No new reports to review'}
+                      {activeSection === 'active' && 'No active reports'}
+                      {activeSection === 'completed' && 'No completed reports yet'}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Upload Completion Modal */}
+      <div className={`modal fade ${showUploadModal ? 'show' : ''}`} style={{ display: showUploadModal ? 'block' : 'none' }} tabIndex={-1}>
+        <div className="modal-dialog modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Upload Completion Proof</h5>
+              <button type="button" className="btn-close" onClick={() => setShowUploadModal(false)}></button>
+            </div>
+            <div className="modal-body">
+              {uploadingReport && (
+                <div className="row mb-4">
+                  <div className="col-md-6">
+                    <h6>Original Report</h6>
+                    <img src={uploadingReport.photo} alt="Original" className="img-fluid rounded mb-2" />
+                    <p>{uploadingReport.description}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6>Upload Completion Photo</h6>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="form-control mb-3"
+                      accept="image/jpeg,image/png"
+                      onChange={handleCompletionImageChange}
+                    />
+                    {completionPreview && (
+                      <img src={completionPreview} alt="Completion Preview" className="img-fluid rounded" />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowUploadModal(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-success" 
+                onClick={handleSubmitCompletion}
+                disabled={!completionPreview}
+              >
+                <Upload size={16} className="me-1" />
+                Submit Completion
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {showUploadModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 };
