@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Mock users for demonstration
   const mockUsers = [
     { _id: '1', name: 'Pranav Pillai', email: 'pranav.pillai@somaiya.edu', password: 'password', role: 'citizen' as const },
-    { _id: '2', name: 'Green NGO', email: 'ngo@example.com', password: 'password123', role: 'ngo' as const },
+    { _id: '2', name: 'Green NGO', email: 'pranav.pillai@somaiya.com', password: 'password', role: 'ngo' as const },
   ];
 
   const addReport = (reportData: Omit<Report, 'reportId' | 'timestamp' | 'status' | 'ngoList'>) => {

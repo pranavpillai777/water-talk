@@ -46,6 +46,7 @@ const LandingPage: React.FC = () => {
                     className="btn btn-primary btn-lg px-5 py-3"
                   >
                     Sign Up
+                    <ArrowRight className="ms-2" size={20} />
                   </Link>
                 </div>
               </div>
