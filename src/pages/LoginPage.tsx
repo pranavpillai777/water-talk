@@ -1,3 +1,4 @@
+// src/pages/LoginPage.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,15 +18,16 @@ interface FormErrors {
 }
 
 const LoginPage: React.FC = () => {
+  const { login } = useAuth(); // Supabase login from AuthContext
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
     role: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = (): boolean => {
@@ -51,44 +53,31 @@ const LoginPage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
+    setFormData(prev => ({ ...prev, [name]: value }));
+
     if (errors[name as keyof FormErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setErrors(prev => ({ ...prev, login: undefined }));
-    
+
     try {
-      const success = await login(formData.email, formData.password, formData.role);
-      if (success) {
-        navigate(formData.role === 'citizen' ? '/citizen-dashboard' : '/ngo-dashboard');
-      } else {
-        setErrors(prev => ({
-          ...prev,
-          login: 'Invalid credentials. Please check your email, password, and role.'
-        }));
-      }
-    } catch (error) {
-      console.error('Login error:', error);
+      await login(formData.email, formData.password);
+
+      // Redirect based on role
+      if (formData.role === 'citizen') navigate('/citizen-dashboard');
+      else if (formData.role === 'ngo') navigate('/ngo-dashboard');
+    } catch (err: any) {
+      console.error('Login error:', err);
       setErrors(prev => ({
         ...prev,
-        login: 'An error occurred. Please try again.'
+        login: err.message || 'Invalid credentials. Please try again.',
       }));
     } finally {
       setIsLoading(false);
@@ -96,16 +85,17 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       className="login-page min-vh-100 d-flex align-items-center"
       style={{
-        backgroundImage: 'url(https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg)',
+        backgroundImage:
+          'url(https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        position: 'relative'
+        position: 'relative',
       }}
     >
-      <div 
+      <div
         style={{
           position: 'absolute',
           top: 0,
@@ -113,25 +103,22 @@ const LoginPage: React.FC = () => {
           right: 0,
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.4)',
-          zIndex: 1
+          zIndex: 1,
         }}
       ></div>
+
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-md-6 col-lg-4">
-            <div className="card shadow-lg border-0" style={{ position: 'relative', zIndex: 2 }}>
+            <div
+              className="card shadow-lg border-0"
+              style={{ position: 'relative', zIndex: 2 }}
+            >
               <div className="card-body p-5">
                 <div className="text-center mb-4">
                   <h2 className="fw-bold text-primary mb-2">Welcome Back</h2>
                   <p className="text-muted">Sign in to your account</p>
                 </div>
-
-                {/* Demo credentials */}
-                {/*<div className="alert alert-info" role="alert">
-                  <strong>Demo Credentials:</strong><br />
-                  Citizen: citizen@example.com / password123<br />
-                  NGO: ngo@example.com / password123
-                </div>*/}
 
                 <form onSubmit={handleSubmit}>
                   {/* Email Field */}
@@ -149,7 +136,9 @@ const LoginPage: React.FC = () => {
                       onChange={handleInputChange}
                       placeholder="Enter your email"
                     />
-                    {errors.email && <div className="invalid-feedback">{errors.email}</div>}
+                    {errors.email && (
+                      <div className="invalid-feedback">{errors.email}</div>
+                    )}
                   </div>
 
                   {/* Password Field */}
@@ -161,7 +150,9 @@ const LoginPage: React.FC = () => {
                     <div className="input-group">
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                        className={`form-control ${
+                          errors.password ? 'is-invalid' : ''
+                        }`}
                         id="password"
                         name="password"
                         value={formData.password}
@@ -176,7 +167,9 @@ const LoginPage: React.FC = () => {
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
-                    {errors.password && <div className="invalid-feedback d-block">{errors.password}</div>}
+                    {errors.password && (
+                      <div className="invalid-feedback d-block">{errors.password}</div>
+                    )}
                   </div>
 
                   {/* Role Selection */}
@@ -215,9 +208,12 @@ const LoginPage: React.FC = () => {
                         </label>
                       </div>
                     </div>
-                    {errors.role && <div className="text-danger small">{errors.role}</div>}
+                    {errors.role && (
+                      <div className="text-danger small">{errors.role}</div>
+                    )}
                   </div>
 
+                  {/* Login Error */}
                   {errors.login && (
                     <div className="alert alert-danger" role="alert">
                       {errors.login}
@@ -229,7 +225,9 @@ const LoginPage: React.FC = () => {
                     className="btn btn-primary w-100 py-2 fw-semibold"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Signing in...' : (
+                    {isLoading ? (
+                      'Signing in...'
+                    ) : (
                       <>
                         <LogIn size={18} className="me-2" />
                         Sign In
@@ -241,7 +239,10 @@ const LoginPage: React.FC = () => {
                 <div className="text-center mt-4">
                   <p className="text-muted">
                     Don't have an account?{' '}
-                    <Link to="/signup" className="text-primary text-decoration-none fw-semibold">
+                    <Link
+                      to="/signup"
+                      className="text-primary text-decoration-none fw-semibold"
+                    >
                       Sign up here
                     </Link>
                   </p>
