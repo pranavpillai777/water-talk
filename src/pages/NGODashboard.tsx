@@ -3,19 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Clock, 
-  MapPin, 
-  Upload, 
-  CheckCircle, 
-  AlertCircle, 
-  Search,
-  Calendar,
-  MapIcon,
-  Users,
-  FileText,
-  Camera
-} from 'lucide-react';
+import { Clock, MapPin, Upload, CheckCircle, AlertCircle, Search, Calendar, Map as MapIcon, Users, FileText, Camera } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // Leaflet marker icons
