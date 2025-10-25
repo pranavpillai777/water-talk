@@ -1,112 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
+import ErrorBoundary from '../components/ErrorBoundary';
+import StableMap from '../components/MapContainer';
 import { useAuth } from '../contexts/AuthContext';
 import { Clock, MapPin, Upload, CheckCircle, AlertCircle, Search, Calendar, Map as MapIcon, Users, FileText, Camera } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
-
-// Memoized MapContainer to prevent unnecessary re-renders
-const StableMapContainer = React.memo(({ reports, user, getStatusBadge, handleAcceptReport, handleUploadCompletion }: {
-  reports: any[];
-  user: any;
-  getStatusBadge: (status: string) => JSX.Element;
-  handleAcceptReport: (reportId: string) => void;
-  handleUploadCompletion: (report: any) => void;
-}) => {
-  return (
-    <MapContainer
-      center={[19.2183, 72.9781]}
-      zoom={11}
-      style={{ height: '100%', width: '100%' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      {reports.map((report) => (
-        <Marker
-          key={`marker-${report.reportId}`}
-          position={[report.location.lat, report.location.lng]}
-          icon={report.ngoList.length > 0 ? greenIcon : undefined}
-        >
-          <Popup minWidth={300}>
-            <div>
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <h6 className="mb-0">{report.username}</h6>
-                {getStatusBadge(report.status)}
-              </div>
-              <p className="mb-2">{report.description}</p>
-              {report.photo && (
-                <img
-                  src={report.photo}
-                  alt="Report"
-                  className="img-fluid mb-2 rounded"
-                  style={{ maxHeight: '150px' }}
-                />
-              )}
-              <div className="mb-2">
-                <small className="text-muted">
-                  <Clock size={12} className="me-1" />
-                  {new Date(report.timestamp).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </small>
-              </div>
-              {report.ngoList.length > 0 && (
-                <div className="mb-2">
-                  <small className="text-success">
-                    <strong>Accepted by:</strong> {report.ngoList.join(', ')}
-                  </small>
-                </div>
-              )}
-              {report.status === 'Reported' && (
-                <button
-                  className="btn btn-success btn-sm w-100"
-                  onClick={() => handleAcceptReport(report.reportId)}
-                >
-                  <CheckCircle size={14} className="me-1" />
-                  Accept Report
-                </button>
-              )}
-              {report.status === 'Active' && report.ngoList.includes(user?.name || '') && !report.completionImage && (
-                <button
-                  className="btn btn-primary btn-sm w-100"
-                  onClick={() => handleUploadCompletion(report)}
-                >
-                  <Upload size={14} className="me-1" />
-                  Upload Completion
-                </button>
-              )}
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
-  );
-});
-
-// Leaflet marker icons
-delete (Icon.Default.prototype as any)._getIconUrl;
-Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom green marker for accepted reports
-const greenIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
 
 const NGODashboard: React.FC = () => {
   const { user, reports: globalReports, acceptReport, uploadCompletionImage } = useAuth();
@@ -213,7 +110,8 @@ const NGODashboard: React.FC = () => {
   };
 
   return (
-    <div>
+    <ErrorBoundary>
+      <div>
       <Navbar />
       
       {/* Top Statistics Bar */}
@@ -366,12 +264,12 @@ const NGODashboard: React.FC = () => {
               </div>
               <div className="card-body p-0">
                 <div style={{ height: '400px' }}>
-                  <StableMapContainer
+                  <StableMap
                     reports={globalReports}
                     user={user}
-                    getStatusBadge={getStatusBadge}
-                    handleAcceptReport={handleAcceptReport}
-                    handleUploadCompletion={handleUploadCompletion}
+                    onAcceptReport={handleAcceptReport}
+                    onUploadCompletion={handleUploadCompletion}
+                    height="400px"
                   />
                 </div>
               </div>
@@ -584,7 +482,8 @@ const NGODashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 
