@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import Navbar from '../components/Navbar';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useAuth } from '../contexts/AuthContext';
 import { Clock, MapPin, Upload, FileText, Camera, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
@@ -196,7 +197,8 @@ const CitizenDashboard: React.FC = () => {
   };
 
   return (
-    <div>
+    <ErrorBoundary>
+      <div>
       <Navbar />
       
       {/* User Header */}
@@ -333,27 +335,30 @@ const CitizenDashboard: React.FC = () => {
                         Select Location <span className="text-danger">*</span>
                       </label>
                       <div className="border rounded" style={{ height: '500px' }}>
-                        <MapContainer
-                          center={[19.2183, 72.9781]}
-                          zoom={12}
-                          style={{ height: '100%', width: '100%' }}
-                        >
-                          <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-                          <MapClickHandler />
-                          {formData.location && (
-                            <Marker position={[formData.location.lat, formData.location.lng]} />
-                          )}
-                          {/* Show existing reports */}
-                          {globalReports.map((report) => (
-                            <Marker
-                              key={report.reportId}
-                              position={[report.location.lat, report.location.lng]}
+                        {typeof window !== 'undefined' && (
+                          <MapContainer
+                            center={[19.2183, 72.9781]}
+                            zoom={12}
+                            style={{ height: '100%', width: '100%' }}
+                            key="citizen-map"
+                          >
+                            <TileLayer
+                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
-                          ))}
-                        </MapContainer>
+                            <MapClickHandler />
+                            {formData.location && (
+                              <Marker position={[formData.location.lat, formData.location.lng]} />
+                            )}
+                            {/* Show existing reports */}
+                            {globalReports.map((report) => (
+                              <Marker
+                                key={`citizen-marker-${report.reportId}`}
+                                position={[report.location.lat, report.location.lng]}
+                              />
+                            ))}
+                          </MapContainer>
+                        )}
                       </div>
                       {formData.location && (
                         <small className="text-muted">
@@ -557,7 +562,8 @@ const CitizenDashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

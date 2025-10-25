@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
+import ErrorBoundary from './ErrorBoundary';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in react-leaflet
@@ -27,12 +28,22 @@ const MapPicker: React.FC<MapPickerProps> = ({
   className = ''
 }) => {
   const [position, setPosition] = useState<[number, number]>([lat || 19.2183, lng || 72.9781]);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   useEffect(() => {
     if (lat && lng) {
       setPosition([lat, lng]);
     }
   }, [lat, lng]);
+
+  useEffect(() => {
+    // Ensure map is ready before rendering
+    const timer = setTimeout(() => {
+      setIsMapReady(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const LocationMarker: React.FC = () => {
     useMapEvents({
@@ -60,20 +71,36 @@ const MapPicker: React.FC<MapPickerProps> = ({
     ) : null;
   };
 
-  return (
-    <div className={`map-picker ${className}`} style={{ height, borderRadius: '8px', overflow: 'hidden' }}>
-      <MapContainer
-        center={position}
-        zoom={13}
-        style={{ height: '100%', width: '100%' }}
+  if (!isMapReady) {
+    return (
+      <div 
+        className={`map-picker ${className} d-flex align-items-center justify-content-center bg-light`} 
+        style={{ height, borderRadius: '8px' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <LocationMarker />
-      </MapContainer>
-    </div>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading map...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className={`map-picker ${className}`} style={{ height, borderRadius: '8px', overflow: 'hidden' }}>
+        <MapContainer
+          center={position}
+          zoom={13}
+          style={{ height: '100%', width: '100%' }}
+          key={`map-picker-${lat}-${lng}`}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <LocationMarker />
+        </MapContainer>
+      </div>
+    </ErrorBoundary>
   );
 };
 
