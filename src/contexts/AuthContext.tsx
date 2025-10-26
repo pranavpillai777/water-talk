@@ -1,10 +1,15 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../supabase';
 
 interface User {
-  _id: string;
-  name: string;
+  id: string;
   email: string;
+  full_name?: string;
   role: 'citizen' | 'ngo';
+  latitude?: number;
+  longitude?: number;
+  operation_area?: string;
 }
 
 interface Report {
@@ -15,209 +20,198 @@ interface Report {
   description: string;
   location: { lat: number; lng: number };
   address: string;
-  timestamp: string;
-  status: 'Reported' | 'Active' | 'Completed';
   ngoList: string[];
-  completionImage?: string;
+  status: 'Reported' | 'Active' | 'Completed';
   citizenApproval?: boolean;
-}
-
-interface NGOAction {
-  reportId: string;
-  ngoUsername: string;
-  actionType: 'accepted' | 'completed';
-  timestamp: string;
+  completionImage?: string;
+  timestamp?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: string) => Promise<boolean>;
-  signup: (userData: any) => Promise<boolean>;
-  logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (data: any) => Promise<void>;
+  logout: () => Promise<void>;
+
   reports: Report[];
-  ngoActions: NGOAction[];
-  addReport: (report: Omit<Report, 'reportId' | 'timestamp' | 'status' | 'ngoList'>) => void;
-  acceptReport: (reportId: string, ngoUsername: string) => void;
-  uploadCompletionImage: (reportId: string, imageUrl: string, ngoUsername: string) => void;
+  addReport: (report: Report) => void;
   approveCompletion: (reportId: string) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  loading: true,
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
+  reports: [],
+  addReport: () => {},
+  approveCompletion: () => {},
+});
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Reports state
   const [reports, setReports] = useState<Report[]>([]);
-  const [ngoActions, setNgoActions] = useState<NGOAction[]>([]);
 
-  // Mock users for demonstration
-  const mockUsers = [
-    { _id: '1', name: 'Pranav Pillai', email: 'pranav.pillai@somaiya.edu', password: 'password', role: 'citizen' as const },
-    { _id: '2', name: 'Green NGO', email: 'pranav.pillai@somaiya.com', password: 'password', role: 'ngo' as const },
-  ];
-
-  const addReport = (reportData: Omit<Report, 'reportId' | 'timestamp' | 'status' | 'ngoList'>) => {
-    const newReport: Report = {
-      ...reportData,
-      reportId: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      status: 'Reported',
-      ngoList: [],
-    };
-    setReports(prev => [newReport, ...prev]);
-  };
-
-  const acceptReport = (reportId: string, ngoUsername: string) => {
-    setReports(prev => prev.map(report => {
-      if (report.reportId === reportId && !report.ngoList.includes(ngoUsername)) {
-        return {
-          ...report,
-          status: 'Active',
-          ngoList: [...report.ngoList, ngoUsername]
-        };
-      }
-      return report;
-    }));
-
-    const newAction: NGOAction = {
-      reportId,
-      ngoUsername,
-      actionType: 'accepted',
-      timestamp: new Date().toISOString()
-    };
-    setNgoActions(prev => [...prev, newAction]);
-  };
-
-  const uploadCompletionImage = (reportId: string, imageUrl: string, ngoUsername: string) => {
-    setReports(prev => prev.map(report => {
-      if (report.reportId === reportId) {
-        return {
-          ...report,
-          completionImage: imageUrl
-        };
-      }
-      return report;
-    }));
-
-    const newAction: NGOAction = {
-      reportId,
-      ngoUsername,
-      actionType: 'completed',
-      timestamp: new Date().toISOString()
-    };
-    setNgoActions(prev => [...prev, newAction]);
+  const addReport = (report: Report) => {
+    setReports(prev => [...prev, report]);
   };
 
   const approveCompletion = (reportId: string) => {
-    setReports(prev => prev.map(report => {
-      if (report.reportId === reportId) {
-        return {
-          ...report,
-          status: 'Completed',
-          citizenApproval: true
-        };
+    setReports(prev =>
+      prev.map(r =>
+        r.reportId === reportId
+          ? { ...r, citizenApproval: true, status: 'Completed' }
+          : r
+      )
+    );
+  };
+
+  // Load session on app start
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          const userId = session.user.id;
+
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+          if (error) throw error;
+
+          if (profile) {
+            setUser({
+              id: profile.user_id,
+              email: profile.email,
+              full_name: profile.full_name,
+              role: profile.role,
+              latitude: profile.latitude,
+              longitude: profile.longitude,
+              operation_area: profile.operation_area,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user session:', err);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      return report;
-    }));
-  };
-  const login = async (email: string, password: string, role: string): Promise<boolean> => {
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password && u.role === role);
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      return true;
-    }
-    return false;
-  };
-
-  const signup = async (userData: any): Promise<boolean> => {
-    // Mock signup - in real app, this would call API
-    const newUser = {
-      _id: Date.now().toString(),
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
     };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    return true;
-  };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-  };
+    loadUser();
 
-  // Check for existing user on load
-  React.useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Optional: listen for auth state changes (login/logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // You can fetch profile again if needed
+      } else {
+        setUser(null);
+      }
+    });
 
-    // Initialize with some mock reports for demonstration
-    if (reports.length === 0) {
-      const mockReports: Report[] = [
-        {
-          reportId: '1',
-          userId: '1',
-          username: 'John Citizen',
-          photo: 'https://images.pexels.com/photos/3560167/pexels-photo-3560167.jpeg',
-          description: 'Stagnant water with algae growth near Thane Creek',
-          location: { lat: 19.2183, lng: 72.9781 },
-          address: 'Thane Creek, Thane',
-          timestamp: '2025-01-15T10:30:00Z',
-          status: 'Reported',
-          ngoList: [],
-        },
-        {
-          reportId: '2',
-          userId: '1',
-          username: 'Jane Smith',
-          photo: 'https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg',
-          description: 'Chemical contamination in Thane Creek, unusual foam and discoloration',
-          location: { lat: 19.2083, lng: 72.9681 },
-          address: 'Creek Bank, Thane',
-          timestamp: '2025-01-14T15:45:00Z',
-          status: 'Active',
-          ngoList: ['Green NGO'],
-        },
-      ];
-      setReports(mockReports);
-    }
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  const value = {
-    user,
-    login,
-    signup,
-    logout,
-    isAuthenticated: !!user,
-    reports,
-    ngoActions,
-    addReport,
-    acceptReport,
-    uploadCompletionImage,
-    approveCompletion,
+  // Login
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    const userId = data.user?.id;
+    if (!userId) throw new Error('User ID not found');
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError || !profile) throw new Error('Profile not found');
+
+    setUser({
+      id: profile.user_id,
+      email: profile.email,
+      full_name: profile.full_name,
+      role: profile.role,
+      latitude: profile.latitude,
+      longitude: profile.longitude,
+      operation_area: profile.operation_area,
+    });
+  };
+
+  // Signup
+  const signup = async (data: any) => {
+    const { email, password, full_name, role, latitude, longitude, operation_area } = data;
+
+    const { data: authData, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+
+    const userId = authData.user?.id;
+    if (!userId) throw new Error('User ID not found after signup');
+
+    // Insert profile into users table
+    const { error: insertError } = await supabase.from('users').insert([
+      {
+        user_id: userId,
+        full_name,
+        email,
+        role,
+        latitude,
+        longitude,
+        operation_area,
+      },
+    ]);
+
+    if (insertError) throw insertError;
+
+    setUser({
+      id: userId,
+      email,
+      full_name,
+      role,
+      latitude,
+      longitude,
+      operation_area,
+    });
+  };
+
+  // Logout
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        signup,
+        logout,
+        reports,
+        addReport,
+        approveCompletion,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);
