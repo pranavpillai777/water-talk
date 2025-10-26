@@ -184,18 +184,20 @@ const CitizenDashboard: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'reported':
-        return <span className="badge bg-warning text-dark"><AlertCircle size={14} className="me-1" />Reported</span>;
-      case 'in-progress':
-        return <span className="badge bg-info text-white"><Clock size={14} className="me-1" />Active</span>;
-      case 'resolved':
-        return <span className="badge bg-success"><CheckCircle size={14} className="me-1" />Completed</span>;
-      default:
-        return <span className="badge bg-secondary"><XCircle size={14} className="me-1" />Unknown</span>;
-    }
-  };
+ const getStatusBadge = (status: string) => {
+  switch (status.toLowerCase()) {   // normalize to lowercase
+    case 'reported':
+      return <span className="badge bg-warning text-dark"><AlertCircle size={14} className="me-1" />Reported</span>;
+    case 'in-progress':
+      return <span className="badge bg-info text-white"><Clock size={14} className="me-1" />Active</span>;
+    case 'resolved':
+      return <span className="badge bg-success"><CheckCircle size={14} className="me-1" />Completed</span>;
+    case 'accepted':
+      return <span className="badge bg-success"><CheckCircle size={14} className="me-1" />Accepted</span>;
+    default:
+      return <span className="badge bg-secondary"><XCircle size={14} className="me-1" />Unknown</span>;
+  }
+};
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('en-US', {

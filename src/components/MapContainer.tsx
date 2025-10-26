@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../supabase';
 
@@ -10,7 +10,7 @@ interface Report {
   complaint_lat: number;
   complaint_long: number;
   complaint_time?: string;
-  photo?: string;
+  image_url?: string;
 }
 
 interface NGO {
@@ -27,11 +27,15 @@ interface MapProps {
   height?: string;
 }
 
-const StableMap: React.FC<MapProps> = ({ reports, user, height = '400px' }) => {
+const StableMap: React.FC<MapProps> = ({ reports, user, height = '600px' }) => {
   const [ngos, setNgos] = useState<NGO[]>([]);
-  const defaultPosition: [number, number] = [19.076, 72.8777]; // fallback Mumbai
+  const [selectedComplaint, setSelectedComplaint] = useState<Report | null>(null);
+  const [localReports, setLocalReports] = useState<Report[]>([]);
 
-  // Fetch NGO locations from DB
+  const defaultPosition: [number, number] = [19.076, 72.8777];
+
+  useEffect(() => setLocalReports(reports), [reports]);
+
   useEffect(() => {
     const fetchNgos = async () => {
       const { data, error } = await supabase
@@ -46,7 +50,6 @@ const StableMap: React.FC<MapProps> = ({ reports, user, height = '400px' }) => {
     fetchNgos();
   }, []);
 
-  // Define icons
   const blueIcon = L.icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
     iconSize: [35, 35],
@@ -59,8 +62,33 @@ const StableMap: React.FC<MapProps> = ({ reports, user, height = '400px' }) => {
     iconAnchor: [17, 35],
   });
 
-  // Filter valid complaint coordinates
-  const markers = reports.filter(
+  const greenIcon = L.icon({
+    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+    iconSize: [35, 35],
+    iconAnchor: [17, 35],
+  });
+
+  const handleAccept = async (complaint: Report) => {
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .update({ status: 'accepted' })
+        .eq('complaint_id', complaint.complaint_id);
+
+      if (!error) {
+        setLocalReports((prev) =>
+          prev.map((r) =>
+            r.complaint_id === complaint.complaint_id ? { ...r, status: 'accepted' } : r
+          )
+        );
+        setSelectedComplaint(null);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const markers = localReports.filter(
     (r) => !isNaN(r.complaint_lat) && !isNaN(r.complaint_long)
   );
 
@@ -80,95 +108,128 @@ const StableMap: React.FC<MapProps> = ({ reports, user, height = '400px' }) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Complaint markers */}
         {markers.map((report) => (
           <Marker
             key={report.complaint_id}
             position={[report.complaint_lat, report.complaint_long]}
-            icon={blueIcon}
-          >
-            <Popup>
-              <strong>{report.description}</strong>
-              <br />
-              Status: {report.status}
-              <br />
-              {report.complaint_time && (
-                <small>{new Date(report.complaint_time).toLocaleString()}</small>
-              )}
-              {report.photo && (
-                <div style={{ marginTop: '5px' }}>
-                  <img
-                    src={report.photo}
-                    alt="Complaint"
-                    style={{ width: '100px', borderRadius: '6px' }}
-                  />
-                </div>
-              )}
-            </Popup>
-          </Marker>
+            icon={report.status === 'accepted' ? greenIcon : blueIcon}
+            eventHandlers={{ click: () => setSelectedComplaint(report) }}
+          />
         ))}
 
-        {/* NGO markers */}
         {ngos.map((ngo) => (
           <Marker
             key={ngo.user_id}
             position={[ngo.latitude, ngo.longitude]}
             icon={redIcon}
-          >
-            <Popup>
-              <strong>{ngo.full_name}</strong>
-              <br />
-              Operation Area: {ngo.operation_area || 'N/A'}
-            </Popup>
-          </Marker>
+          />
         ))}
       </MapContainer>
 
-     {/* ✅ Floating Legend */}
-<div
-  style={{
-    position: 'absolute',
-    top: '15px',          // moved from bottom to top
-    right: '15px',        // keep it right-aligned
-    background: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: '10px',
-    padding: '10px 15px',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: '14px',
-    color: '#333',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    backdropFilter: 'blur(6px)',
-  }}
->
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-    <span
-      style={{
-        display: 'inline-block',
-        width: '15px',
-        height: '15px',
-        backgroundColor: '#4285F4',
-        borderRadius: '3px',
-      }}
-    ></span>
-    Complaint Locations
-  </div>
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-    <span
-      style={{
-        display: 'inline-block',
-        width: '15px',
-        height: '15px',
-        backgroundColor: '#EA4335',
-        borderRadius: '3px',
-      }}
-    ></span>
-    NGO Locations
-  </div>
-</div>
+      {/* Legend */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '15px',
+          right: '15px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '10px',
+          padding: '10px 15px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          color: '#333',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          backdropFilter: 'blur(6px)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{ display: 'inline-block', width: '15px', height: '15px', backgroundColor: '#4285F4', borderRadius: '3px' }}
+          ></span>
+          Complaint Locations
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{ display: 'inline-block', width: '15px', height: '15px', backgroundColor: '#EA4335', borderRadius: '3px' }}
+          ></span>
+          NGO Locations
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{ display: 'inline-block', width: '15px', height: '15px', backgroundColor: '#34A853', borderRadius: '3px' }}
+          ></span>
+          Accepted Complaints
+        </div>
+      </div>
 
+      {/* Modal */}
+      {selectedComplaint && (
+        <div
+          style={{
+            position: 'fixed', // ✅ fixed so it’s always visible
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+            zIndex: 1000,
+            width: '350px',
+            maxHeight: '80vh',
+            overflowY: 'auto', // ✅ scroll if content too tall
+          }}
+        >
+          <h3 className="text-lg font-bold">{selectedComplaint.description}</h3>
+          <p>Status: {selectedComplaint.status}</p>
+          {selectedComplaint.complaint_time && (
+            <p>Submitted: {new Date(selectedComplaint.complaint_time).toLocaleString()}</p>
+          )}
+          <p>Location: {selectedComplaint.complaint_lat}, {selectedComplaint.complaint_long}</p>
+          {selectedComplaint.image_url && (
+            <img
+              src={selectedComplaint.image_url}
+              alt="Complaint"
+              style={{ width: '100%', marginTop: '10px', borderRadius: '8px' }}
+            />
+          )}
+          {selectedComplaint.status !== 'accepted' && (
+            <button
+              onClick={() => handleAccept(selectedComplaint)}
+              style={{
+                marginTop: '10px',
+                width: '100%',
+                padding: '8px',
+                backgroundColor: '#34A853',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Accept Complaint
+            </button>
+          )}
+          <button
+            onClick={() => setSelectedComplaint(null)}
+            style={{
+              marginTop: '8px',
+              width: '100%',
+              padding: '6px',
+              backgroundColor: '#EA4335',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };
