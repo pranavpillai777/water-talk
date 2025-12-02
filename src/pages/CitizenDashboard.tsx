@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Clock, MapPin, Upload, FileText, Camera, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../supabase';
+import { validateImageFile, validateImageDimensions, formatFileSize, getImageInfo } from '../utils/imageValidation';
 
 // Leaflet default marker fix
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -40,6 +41,13 @@ const CitizenDashboard: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageInfo, setImageInfo] = useState<{
+    width: number;
+    height: number;
+    size: string;
+    type: string;
+  } | null>(null);
+  const [isValidatingImage, setIsValidatingImage] = useState(false);
 
   // ✅ NEW: Replace local filtering with Supabase fetch
   const [userReports, setUserReports] = useState<any[]>([]);
@@ -84,14 +92,56 @@ const CitizenDashboard: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onload = e => setImagePreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-      if (errors.image) setErrors(prev => ({ ...prev, image: undefined }));
+      setIsValidatingImage(true);
+      setErrors(prev => ({ ...prev, image: undefined }));
+      
+      try {
+        // Basic file validation (size, type)
+        const fileValidation = validateImageFile(file);
+        if (!fileValidation.isValid) {
+          setErrors(prev => ({ ...prev, image: fileValidation.error }));
+          setSelectedFile(null);
+          setImagePreview('');
+          setImageInfo(null);
+          setIsValidatingImage(false);
+          return;
+        }
+        
+        // Dimension validation
+        const dimensionValidation = await validateImageDimensions(file);
+        if (!dimensionValidation.isValid) {
+          setErrors(prev => ({ ...prev, image: dimensionValidation.error }));
+          setSelectedFile(null);
+          setImagePreview('');
+          setImageInfo(null);
+          setIsValidatingImage(false);
+          return;
+        }
+        
+        // Get image info for display
+        const info = await getImageInfo(file);
+        setImageInfo(info);
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = e => {
+          setImagePreview(e.target?.result as string);
+          setSelectedFile(file);
+          setIsValidatingImage(false);
+        };
+        reader.readAsDataURL(file);
+        
+      } catch (error) {
+        console.error('Image validation error:', error);
+        setErrors(prev => ({ ...prev, image: 'Failed to process image. Please try another file.' }));
+        setSelectedFile(null);
+        setImagePreview('');
+        setImageInfo(null);
+        setIsValidatingImage(false);
+      }
     }
   };
 
@@ -241,6 +291,11 @@ const CitizenDashboard: React.FC = () => {
                     <input type="file" accept="image/*" onChange={handleImageChange} />
                     {errors.image && <div className="text-danger">{errors.image}</div>}
                     {imagePreview && <img src={imagePreview} alt="preview" className="img-fluid mt-2" />}
+                    <div className="mb-2">
+                      <small className="text-muted">
+                        Accepted formats: JPG, PNG, WebP • Max size: 5MB • Min dimensions: 200×200px
+                      </small>
+                    </div>
                   </div>
 
                   {/* Description */}
@@ -268,6 +323,7 @@ const CitizenDashboard: React.FC = () => {
                       </MapContainer>
                     )}
                     {errors.location && <div className="text-danger mt-1">{errors.location}</div>}
+                        disabled={isValidatingImage}
                   </div>
 
                   <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
@@ -278,10 +334,27 @@ const CitizenDashboard: React.FC = () => {
             </div>
           )}
 
+                            {imageInfo && (
+                              <div className="mt-2">
+                                <small className="text-success">
+                                  ✓ {imageInfo.width}×{imageInfo.height}px • {imageInfo.size}
+                                </small>
+                              </div>
+                            )}
           {activeTab === 'submissions' && (
             <div>
               {userReports.length === 0 ? (
                 <p>No submissions yet.</p>
+                        ) : isValidatingImage ? (
+                          <div>
+                            <div className="spinner-border text-primary mb-2" role="status">
+                              <span className="visually-hidden">Validating image...</span>
+                            </div>
+                            <div>
+                              <Upload size={24} className="text-muted mb-2" />
+                              <p className="mb-0 text-muted">Validating image...</p>
+                            </div>
+                          </div>
               ) : (
                 <div className="row">
                   {userReports.map((report: any) => (
@@ -289,7 +362,7 @@ const CitizenDashboard: React.FC = () => {
                       <div className="card shadow-sm">
                         <img src={report.image_url} className="card-img-top" alt="report" />
                         <div className="card-body">
-                          <p>{report.description}</p>
+                              Max 5MB • JPG, PNG, WebP • Min 200×200px
                           <p>{getStatusBadge(report.status)}</p>
                           <small className="text-muted">{formatDate(report.complaint_time)}</small>
                         </div>
